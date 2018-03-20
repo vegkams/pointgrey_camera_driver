@@ -15,10 +15,11 @@ add_message_files(
 generate_messages(
   DEPENDENCIES
   sensor_msgs
+  custom_msgs
 )
 
 catkin_package(
-  CATKIN_DEPENDS message_runtime sensor_msgs
+  CATKIN_DEPENDS message_runtime sensor_msgs custom_msgs
 )
 
 include_directories(
