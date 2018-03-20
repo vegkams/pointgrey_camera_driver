@@ -40,6 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <sensor_msgs/CameraInfo.h> // ROS message header for CameraInfo
 
 #include <wfov_camera_msgs/WFOVImage.h>
+#include <custom_msgs/UtcTime.h>
 #include <image_exposure_msgs/ExposureSequence.h> // Message type for configuring gain and white balance.
 
 #include <diagnostic_updater/diagnostic_updater.h> // Headers for publishing diagnostic messages.
@@ -290,6 +291,7 @@ private:
     // Set up diagnostics
     updater_.setHardwareID("pointgrey_camera " + cinfo_name.str());
 
+    utc_sub = nh.subscribe("utc_time", 10, &pointgrey_camera_driver::PointGreyCameraNodelet::utcCallback, this);
     // Set up a diagnosed publisher
     double desired_freq;
     pnh.param<double>("desired_freq", desired_freq, 7.0);
@@ -489,10 +491,16 @@ private:
             wfov_image->white_balance_red = wb_red_;
 
             wfov_image->temperature = pg_.getCameraTemperature();
+            // MODIFIED
+            // Get shutter speed (in us) from metadata
+            wfov_image->shutter = pg_.getShutter();
 
             ros::Time time = ros::Time::now();
             wfov_image->header.stamp = time;
             wfov_image->image.header.stamp = time;
+            // Latest received utc message with trigger indication (for synchronization)
+            // @todo Test that this works
+            wfov_image->utc_time = utc_msg;
 
             // Set the CameraInfo message
             ci_.reset(new sensor_msgs::CameraInfo(cinfo_->getCameraInfo()));
@@ -562,14 +570,25 @@ private:
     }
   }
 
+  void utcCallback(const custom_msgs::UtcTime &msg)
+  {
+    if (msg.triggerActive)
+    {
+      utc_msg = msg;
+    }
+  }
+
   boost::shared_ptr<dynamic_reconfigure::Server<pointgrey_camera_driver::PointGreyConfig> > srv_; ///< Needed to initialize and keep the dynamic_reconfigure::Server in scope.
   boost::shared_ptr<image_transport::ImageTransport> it_; ///< Needed to initialize and keep the ImageTransport in scope.
   boost::shared_ptr<camera_info_manager::CameraInfoManager> cinfo_; ///< Needed to initialize and keep the CameraInfoManager in scope.
   image_transport::CameraPublisher it_pub_; ///< CameraInfoManager ROS publisher
   boost::shared_ptr<diagnostic_updater::DiagnosedPublisher<wfov_camera_msgs::WFOVImage> > pub_; ///< Diagnosed publisher, has to be a pointer because of constructor requirements
   ros::Subscriber sub_; ///< Subscriber for gain and white balance changes.
+  ros::Subscriber utc_sub; // Subscriber for utc time from IMU
 
   boost::mutex connect_mutex_;
+
+  custom_msgs::UtcTime utc_msg;
 
   diagnostic_updater::Updater updater_; ///< Handles publishing diagnostics messages.
   double min_freq_;
