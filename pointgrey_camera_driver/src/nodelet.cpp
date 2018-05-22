@@ -30,6 +30,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 // ROS and associated nodelet interface and PLUGINLIB declaration header
 #include "ros/ros.h"
+#include "ros/console.h"
 #include <pluginlib/class_list_macros.h>
 #include <nodelet/nodelet.h>
 
@@ -291,7 +292,7 @@ private:
     // Set up diagnostics
     updater_.setHardwareID("pointgrey_camera " + cinfo_name.str());
 
-    utc_sub = nh.subscribe("utc_time", 10, &pointgrey_camera_driver::PointGreyCameraNodelet::utcCallback, this);
+    utc_sub = nh.subscribe("/xsens/utc_time", 10, &pointgrey_camera_driver::PointGreyCameraNodelet::utcCallback, this);
     // Set up a diagnosed publisher
     double desired_freq;
     pnh.param<double>("desired_freq", desired_freq, 7.0);
@@ -494,6 +495,7 @@ private:
             // MODIFIED
             // Get shutter speed (in us) from metadata
             wfov_image->shutter = pg_.getShutter();
+            //std::cout << "Shutter is " << pg_.getShutter() << "\n";
 
             ros::Time time = ros::Time::now();
             wfov_image->header.stamp = time;
